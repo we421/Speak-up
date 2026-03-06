@@ -1,0 +1,199 @@
+// SpeakUp - Professional English Learning App Database Schema
+// Supporting levels, exercises, reading texts, and pronunciation evaluation
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// User account
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  learner   EnglishLearner?
+}
+
+// Main learner profile
+model EnglishLearner {
+  id                String   @id @default(cuid())
+  userId            String?  @unique
+  name              String
+  currentLevel      Level    @default(BEGINNER)
+  totalStudyMinutes Int      @default(0)
+  exercisesCompleted Int     @default(0)
+  textsRead         Int      @default(0)
+  pronunciationScore Float   @default(0)
+  writingScore      Float    @default(0)
+  listeningScore    Float    @default(0)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  user              User?               @relation(fields: [userId], references: [id])
+  chatHistory       ChatHistory[]
+  practiceSessions  PracticeSession[]
+  readingProgress   ReadingProgress[]
+  recordingHistory  RecordingHistory[]
+  exerciseAttempts  ExerciseAttempt[]
+  levelProgress     LevelProgress[]
+}
+
+// Learning levels
+enum Level {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+}
+
+// Reading texts with translations
+model ReadingText {
+  id          String   @id @default(cuid())
+  level       Level
+  title       String
+  content     String   // English text
+  translation String   // Arabic translation
+  difficulty  Int      @default(1) // 1-10
+  duration    Int      // estimated reading time in minutes
+  wordCount   Int
+  category    String   // e.g., "daily life", "business", "travel"
+  orderIndex  Int
+  createdAt   DateTime @default(now())
+
+  progress    ReadingProgress[]
+  recordings  RecordingHistory[]
+}
+
+// Learner's reading progress
+model ReadingProgress {
+  id          String   @id @default(cuid())
+  learnerId   String
+  textId      String
+  completed   Boolean  @default(false)
+  readingTime Int      // seconds
+  attempts    Int      @default(0)
+  bestScore   Float?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  learner     EnglishLearner @relation(fields: [learnerId], references: [id], onDelete: Cascade)
+  text        ReadingText    @relation(fields: [textId], references: [id], onDelete: Cascade)
+
+  @@unique([learnerId, textId])
+}
+
+// Exercise types
+enum ExerciseType {
+  WRITING
+  LISTENING
+  PRONUNCIATION
+  GRAMMAR
+  VOCABULARY
+}
+
+// Exercises
+model Exercise {
+  id          String       @id @default(cuid())
+  level       Level
+  type        ExerciseType
+  title       String
+  question    String       // English
+  questionAr  String       // Arabic translation
+  content     String?      // JSON: additional exercise data (audio URL, options, etc.)
+  correctAnswer String     // English
+  explanation String?      // English explanation
+  explanationAr String?    // Arabic explanation
+  difficulty  Int          @default(1) // 1-10
+  orderIndex  Int
+  createdAt   DateTime     @default(now())
+
+  attempts    ExerciseAttempt[]
+}
+
+// Learner's exercise attempts
+model ExerciseAttempt {
+  id          String   @id @default(cuid())
+  learnerId   String
+  exerciseId  String
+  answer      String
+  isCorrect   Boolean
+  score       Float?
+  feedback    String?  // AI-generated feedback
+  feedbackAr  String?  // Arabic feedback
+  attempts    Int      @default(1)
+  duration    Int      // seconds
+  createdAt   DateTime @default(now())
+
+  learner     EnglishLearner @relation(fields: [learnerId], references: [id], onDelete: Cascade)
+  exercise    Exercise       @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+}
+
+// Recording history for pronunciation practice
+model RecordingHistory {
+  id          String   @id @default(cuid())
+  learnerId   String
+  textId      String?
+  exerciseId  String?
+  recordedText String  // What the user read/said
+  transcription String // ASR result
+  correction   String? // AI correction
+  score        Float?  // 0-100
+  feedback     String? // English feedback
+  feedbackAr   String? // Arabic feedback
+  audioUrl     String? // Path to saved audio
+  duration     Int      // seconds
+  createdAt    DateTime @default(now())
+
+  learner      EnglishLearner @relation(fields: [learnerId], references: [id], onDelete: Cascade)
+  text         ReadingText?   @relation(fields: [textId], references: [id])
+}
+
+// Level progress tracking
+model LevelProgress {
+  id          String   @id @default(cuid())
+  learnerId   String
+  level       Level
+  exercisesCompleted Int   @default(0)
+  textsRead     Int      @default(0)
+  averageScore  Float?
+  startedAt    DateTime @default(now())
+  completedAt   DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  learner      EnglishLearner @relation(fields: [learnerId], references: [id], onDelete: Cascade)
+
+  @@unique([learnerId, level])
+}
+
+// Chat history for conversation practice
+model ChatHistory {
+  id           String   @id @default(cuid())
+  learnerId    String
+  role         String   // 'user' or 'assistant'
+  content      String
+  contentAr    String?  // Arabic translation
+  timestamp    DateTime @default(now())
+
+  learner      EnglishLearner @relation(fields: [learnerId], references: [id], onDelete: Cascade)
+}
+
+// Practice sessions (general)
+model PracticeSession {
+  id           String   @id @default(cuid())
+  learnerId    String
+  type         String   // 'reading', 'writing', 'listening', 'pronunciation', 'conversation'
+  title        String
+  duration     Int      // seconds
+  score        Float?
+  completed    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+
+  learner      EnglishLearner @relation(fields: [learnerId], references: [id], onDelete: Cascade)
+}
