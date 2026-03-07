@@ -41,7 +41,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "SpeakUp - Master English with AI",
     description: "Professional English learning with AI-powered exercises and instant feedback",
-    url: "https://speakup.app",
+    url: "https://github.com/We421/Speak-up",
     siteName: "SpeakUp",
     type: "website",
     locale: "en_US",

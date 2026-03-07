@@ -8,7 +8,7 @@
   "theme_color": "#6366f1",
   "orientation": "portrait-primary",
   "scope": "/",
-  "dir": "rtl",
+  "dir": "ltr",
   "lang": "en",
   "categories": ["education", "lifestyle"],
   "screenshots": [
