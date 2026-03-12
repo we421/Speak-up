@@ -1,0 +1,448 @@
+// SpeakUp - Professional English Learning App Database Schema
+// Supporting levels, exercises, reading texts, and pronunciation evaluation
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// User account
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  learner   EnglishLearner?
+}
+
+// Main learner profile
+model EnglishLearner {
+  id                String   @id @default(cuid())
+  userId            String?  @unique
+  name              String
+  currentLevel      Level    @default(BEGINNER)
+  totalStudyMinutes Int      @default(0)
+  exercisesCompleted Int     @default(0)
+  textsRead         Int      @default(0)
+  pronunciationScore Float   @default(0)
+  writingScore      Float    @default(0)
+  listeningScore    Float    @default(0)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  user              User?               @relation(fields: [userId], references: [id])
+  chatHistory       ChatHistory[]
+  practiceSessions  PracticeSession[]
+  readingProgress   ReadingProgress[]
+  recordingHistory  RecordingHistory[]
+  exerciseAttempts  ExerciseAttempt[]
+  levelProgress     LevelProgress[]
+
+  // Gamification
+  gamificationProfile GamificationProfile?
+  badges              UserBadge[]
+  dailyChallenges     UserDailyChallenge[]
+  sentFriendRequests  Friend[]            @relation("SentFriendRequests")
+  receivedFriendRequests Friend[]         @relation("ReceivedFriendRequests")
+  userLessons         UserLesson[]
+}
+
+// Learning levels
+enum Level {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+}
+
+// Reading texts with translations
+model ReadingText {
+  id          String   @id @default(cuid())
+  level       Level
+  title       String
+  content     String   // English text
+  translation String   // Arabic translation
+  difficulty  Int      @default(1) // 1-10
+  duration    Int      // estimated reading time in minutes
+  wordCount   Int
+  category    String   // e.g., "daily life", "business", "travel"
+  orderIndex  Int
+  createdAt   DateTime @default(now())
+
+  progress    ReadingProgress[]
+  recordings  RecordingHistory[]
+}
+
+// Learner's reading progress
+model ReadingProgress {
+  id          String   @id @default(cuid())
+  learnerId   String
+  textId      String
+  completed   Boolean  @default(false)
+  readingTime Int      // seconds
+  attempts    Int      @default(0)
+  bestScore   Float?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  learner     EnglishLearner @relation(fields: [learnerId], references: [id], onDelete: Cascade)
+  text        ReadingText    @relation(fields: [textId], references: [id], onDelete: Cascade)
+
+  @@unique([learnerId, textId])
+}
+
+// Exercise types
+enum ExerciseType {
+  WRITING
+  LISTENING
+  PRONUNCIATION
+  GRAMMAR
+  VOCABULARY
+}
+
+// Exercises
+model Exercise {
+  id          String       @id @default(cuid())
+  level       Level
+  type        ExerciseType
+  title       String
+  question    String       // English
+  questionAr  String       // Arabic translation
+  content     String?      // JSON: additional exercise data (audio URL, options, etc.)
+  correctAnswer String     // English
+  explanation String?      // English explanation
+  explanationAr String?    // Arabic explanation
+  difficulty  Int          @default(1) // 1-10
+  orderIndex  Int
+  createdAt   DateTime     @default(now())
+
+  attempts    ExerciseAttempt[]
+}
+
+// Learner's exercise attempts
+model ExerciseAttempt {
+  id          String   @id @default(cuid())
+  learnerId   String
+  exerciseId  String
+  answer      String
+  isCorrect   Boolean
+  score       Float?
+  feedback    String?  // AI-generated feedback
+  feedbackAr  String?  // Arabic feedback
+  attempts    Int      @default(1)
+  duration    Int      // seconds
+  createdAt   DateTime @default(now())
+
+  learner     EnglishLearner @relation(fields: [learnerId], references: [id], onDelete: Cascade)
+  exercise    Exercise       @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+}
+
+// Recording history for pronunciation practice
+model RecordingHistory {
+  id          String   @id @default(cuid())
+  learnerId   String
+  textId      String?
+  exerciseId  String?
+  recordedText String  // What the user read/said
+  transcription String // ASR result
+  correction   String? // AI correction
+  score        Float?  // 0-100
+  feedback     String? // English feedback
+  feedbackAr   String? // Arabic feedback
+  audioUrl     String? // Path to saved audio
+  duration     Int      // seconds
+  createdAt    DateTime @default(now())
+
+  learner      EnglishLearner @relation(fields: [learnerId], references: [id], onDelete: Cascade)
+  text         ReadingText?   @relation(fields: [textId], references: [id])
+}
+
+// Level progress tracking
+model LevelProgress {
+  id          String   @id @default(cuid())
+  learnerId   String
+  level       Level
+  exercisesCompleted Int   @default(0)
+  textsRead     Int      @default(0)
+  averageScore  Float?
+  startedAt    DateTime @default(now())
+  completedAt   DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  learner      EnglishLearner @relation(fields: [learnerId], references: [id], onDelete: Cascade)
+
+  @@unique([learnerId, level])
+}
+
+// Chat history for conversation practice
+model ChatHistory {
+  id           String   @id @default(cuid())
+  learnerId    String
+  role         String   // 'user' or 'assistant'
+  content      String
+  contentAr    String?  // Arabic translation
+  timestamp    DateTime @default(now())
+
+  learner      EnglishLearner @relation(fields: [learnerId], references: [id], onDelete: Cascade)
+}
+
+// Practice sessions (general)
+model PracticeSession {
+  id           String   @id @default(cuid())
+  learnerId    String
+  type         String   // 'reading', 'writing', 'listening', 'pronunciation', 'conversation'
+  title        String
+  duration     Int      // seconds
+  score        Float?
+  completed    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+
+  learner      EnglishLearner @relation(fields: [learnerId], references: [id], onDelete: Cascade)
+}
+
+// ============================================
+// GAMIFICATION SYSTEM - Better than Duolingo!
+// ============================================
+
+// Gamification profile for each learner
+model GamificationProfile {
+  id                String   @id @default(cuid())
+  learnerId         String   @unique
+  xp                Int      @default(0)
+  level             Int      @default(1)
+  xpToNextLevel     Int      @default(100)
+  currentStreak     Int      @default(0)
+  longestStreak     Int      @default(0)
+  lastActiveDate    DateTime?
+  hearts            Int      @default(5)
+  maxHearts         Int      @default(5)
+  heartsRefillTime  DateTime?
+  gems              Int      @default(0)
+  totalXPEarned     Int      @default(0)
+  lessonsCompleted  Int      @default(0)
+  perfectLessons    Int      @default(0)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  learner           EnglishLearner @relation(fields: [learnerId], references: [id], onDelete: Cascade)
+  streakHistory     StreakHistory[]
+}
+
+// Streak history tracking
+model StreakHistory {
+  id          String   @id @default(cuid())
+  profileId   String
+  date        DateTime @default(now())
+  streakCount Int
+  isStreakMaintained Boolean @default(false)
+  createdAt   DateTime @default(now())
+
+  profile     GamificationProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@unique([profileId, date])
+}
+
+// User levels (1-50 for granular progression)
+model UserLevel {
+  id             String   @id @default(cuid())
+  level          Int      @unique
+  name           String
+  nameAr         String
+  xpRequired     Int
+  tier           LevelTier
+  rewardsGems    Int      @default(0)
+  rewardsHearts  Int      @default(0)
+  badgeId        String?
+  createdAt      DateTime @default(now())
+}
+
+enum LevelTier {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+  EXPERT
+  MASTER
+}
+
+// Badges/Achievements
+model Badge {
+  id            String   @id @default(cuid())
+  name          String
+  nameAr        String
+  description   String
+  descriptionAr String
+  icon          String   // emoji or icon name
+  category      BadgeCategory
+  rarity        BadgeRarity
+  xpReward      Int      @default(0)
+  gemsReward    Int      @default(0)
+  requirement   String   // JSON: conditions to earn
+  createdAt     DateTime @default(now())
+
+  userBadges    UserBadge[]
+}
+
+enum BadgeCategory {
+  STREAK
+  LESSONS
+  SKILLS
+  SOCIAL
+  SPECIAL
+  MASTERY
+}
+
+enum BadgeRarity {
+  COMMON
+  RARE
+  EPIC
+  LEGENDARY
+}
+
+// User earned badges
+model UserBadge {
+  id          String   @id @default(cuid())
+  learnerId   String
+  badgeId     String
+  earnedAt    DateTime @default(now())
+  progress    Int      @default(0) // For progress-based badges
+  maxProgress Int      @default(1)
+
+  learner     EnglishLearner @relation(fields: [learnerId], references: [id], onDelete: Cascade)
+  badge       Badge           @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+
+  @@unique([learnerId, badgeId])
+}
+
+// Daily challenges
+model DailyChallenge {
+  id          String   @id @default(cuid())
+  date        DateTime @unique
+  title       String
+  titleAr     String
+  description String
+  descriptionAr String
+  type        ChallengeType
+  target      Int      // Target to complete (e.g., 3 lessons, 100 XP)
+  xpReward    Int
+  gemsReward  Int
+  createdAt   DateTime @default(now())
+
+  userChallenges UserDailyChallenge[]
+}
+
+enum ChallengeType {
+  COMPLETE_LESSONS
+  EARN_XP
+  PERFECT_LESSONS
+  MAINTAIN_STREAK
+  PRACTICE_SKILL
+  SOCIAL_SHARE
+}
+
+// User daily challenge progress
+model UserDailyChallenge {
+  id          String   @id @default(cuid())
+  learnerId   String
+  challengeId String
+  progress    Int      @default(0)
+  completed   Boolean  @default(false)
+  completedAt DateTime?
+  claimed     Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  learner     EnglishLearner @relation(fields: [learnerId], references: [id], onDelete: Cascade)
+  challenge   DailyChallenge  @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+
+  @@unique([learnerId, challengeId])
+}
+
+// Friend system
+model Friend {
+  id           String   @id @default(cuid())
+  senderId     String
+  receiverId   String
+  status       FriendStatus @default(PENDING)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  sender       EnglishLearner @relation("SentFriendRequests", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver     EnglishLearner @relation("ReceivedFriendRequests", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  @@unique([senderId, receiverId])
+}
+
+enum FriendStatus {
+  PENDING
+  ACCEPTED
+  BLOCKED
+}
+
+// Leaderboard (weekly/monthly)
+model LeaderboardEntry {
+  id           String   @id @default(cuid())
+  learnerId    String
+  xp           Int      @default(0)
+  lessons      Int      @default(0)
+  streak       Int      @default(0)
+  rank         Int
+  period       LeaderboardPeriod
+  startDate    DateTime
+  endDate      DateTime
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+enum LeaderboardPeriod {
+  DAILY
+  WEEKLY
+  MONTHLY
+  ALL_TIME
+}
+
+// Lesson progress (for the learning path)
+model Lesson {
+  id          String   @id @default(cuid())
+  level       Level
+  unit        Int      // Unit number (1-10)
+  orderIndex  Int      // Order within unit
+  title       String
+  titleAr     String
+  description String?
+  descriptionAr String?
+  skills      String   // JSON array of skills taught
+  xpReward    Int      @default(10)
+  gemReward   Int      @default(0)
+  isLocked    Boolean  @default(true)
+  isBonus     Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  userLessons UserLesson[]
+}
+
+// User lesson progress
+model UserLesson {
+  id          String   @id @default(cuid())
+  learnerId   String
+  lessonId    String
+  completed   Boolean  @default(false)
+  score       Float?   // 0-100
+  attempts    Int      @default(0)
+  bestScore   Float?
+  xpEarned    Int      @default(0)
+  gemsEarned  Int      @default(0)
+  completedAt DateTime?
+  lastAttemptAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  learner     EnglishLearner @relation(fields: [learnerId], references: [id], onDelete: Cascade)
+  lesson      Lesson         @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@unique([learnerId, lessonId])
+}
