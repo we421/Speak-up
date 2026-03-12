@@ -1,11 +1,13 @@
 // Service Worker for SpeakUp PWA
-const CACHE_NAME = 'speakup-v1';
+const CACHE_NAME = 'speakup-v2';
 const urlsToCache = [
   '/',
   '/manifest.json',
+  '/icons/icon-96x96.png',
   '/icons/icon-192x192.png',
   '/icons/icon-512x512.png',
-  '/icons/icon-1024x1024.png'
+  '/icons/icon-1024x1024.png',
+  '/screenshots/home.png'
 ];
 
 // Install event - cache resources

@@ -13,6 +13,12 @@
   "categories": ["education", "lifestyle"],
   "icons": [
     {
+      "src": "/icons/icon-96x96.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
       "src": "/icons/icon-192x192.png",
       "sizes": "192x192",
       "type": "image/png",
@@ -31,6 +37,14 @@
       "purpose": "any maskable"
     }
   ],
+  "screenshots": [
+    {
+      "src": "/screenshots/home.png",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "form_factor": "narrow"
+    }
+  ],
   "shortcuts": [
     {
       "name": "Start Reading",
@@ -38,8 +52,8 @@
       "description": "Practice reading with AI",
       "url": "/?tab=reading",
       "icons": [{
-        "src": "/icons/icon-192x192.png",
-        "sizes": "192x192",
+        "src": "/icons/icon-96x96.png",
+        "sizes": "96x96",
         "type": "image/png"
       }]
     },
@@ -49,8 +63,8 @@
       "description": "Improve your writing skills",
       "url": "/?tab=writing",
       "icons": [{
-        "src": "/icons/icon-192x192.png",
-        "sizes": "192x192",
+        "src": "/icons/icon-96x96.png",
+        "sizes": "96x96",
         "type": "image/png"
       }]
     },
@@ -60,8 +74,8 @@
       "description": "Practice speaking",
       "url": "/?tab=pronunciation",
       "icons": [{
-        "src": "/icons/icon-192x192.png",
-        "sizes": "192x192",
+        "src": "/icons/icon-96x96.png",
+        "sizes": "96x96",
         "type": "image/png"
       }]
     }
