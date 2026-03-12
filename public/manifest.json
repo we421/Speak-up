@@ -2,7 +2,7 @@
   "name": "SpeakUp - Learn English",
   "short_name": "SpeakUp",
   "description": "Master English with AI-powered learning. Reading, writing, listening, and pronunciation exercises with instant feedback.",
-  "start_url": "/",
+  "start_url": "/?source=pwa",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#6366f1",
